@@ -8,10 +8,6 @@ async function startServer() {
     // Connect to the database
     await connectToDatabase();
 
-    // Seed Admin Credentials
-    const { seedAdminCredentials } = await import("./utils/seedAdminCredentials.js");
-    await seedAdminCredentials();
-
     // Start Express server
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);

@@ -12,7 +12,7 @@ export const seedAdminCredentials = async () => {
     const developerEmail = process.env.INITIAL_DEV_EMAIL;
     const developerPassword = process.env.INITIAL_DEV_PASSWORD;
 
-    // 1. Check/Update Super Admin
+    // 1. Check/Create Super Admin
     const existingAdmin = await AdminLoginCredential.findOne({ email: adminEmail });
     if (!existingAdmin) {
       await AdminLoginCredential.create({
@@ -20,14 +20,10 @@ export const seedAdminCredentials = async () => {
         password: adminPassword,
         role: ROLES.SUPERADMIN
       });
-    
-    } else {
-      existingAdmin.password = adminPassword;
-      await existingAdmin.save();
-      
+      console.log(`✅ Initial Super Admin created: ${adminEmail}`);
     }
 
-    // 2. Check/Update Developer Admin
+    // 2. Check/Create Developer Admin
     const existingDev = await AdminLoginCredential.findOne({ email: developerEmail });
     if (!existingDev) {
       await AdminLoginCredential.create({
@@ -35,20 +31,11 @@ export const seedAdminCredentials = async () => {
         password: developerPassword,
         role: ROLES.SUPERADMIN
       });
-     
-    } else {
-      existingDev.password = developerPassword;
-      await existingDev.save();
+      console.log(`✅ Initial Developer Admin created: ${developerEmail}`);
     }
 
-    // 3. Delete any other admin accounts that are not in the .env file
-    const deletionResult = await AdminLoginCredential.deleteMany({
-      email: { $nin: [adminEmail.toLowerCase(), developerEmail.toLowerCase()] }
-    });
+    // 3. (Removed) Automatic deletion of other accounts to allow manual management
 
-    if (deletionResult.deletedCount > 0) {
-      console.log(`🧹 Cleaned up ${deletionResult.deletedCount} old/unauthorized admin accounts.`);
-    }
 
   } catch (error) {
     console.error(" Seeding admin credentials failed:", error.message);
