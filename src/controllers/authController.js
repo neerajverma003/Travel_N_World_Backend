@@ -162,6 +162,11 @@ export const verifyOTP = async (req, res) => {
         _id: admin._id,
         email: admin.email,
         role: admin.role,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        phone: admin.phone,
+        photo: admin.photo,
+        isVerified: admin.isVerified ?? false,
         isProfileComplete: admin.isProfileComplete ?? false,
       },
     });
@@ -256,6 +261,7 @@ export const googleLogin = async (req, res) => {
         lastName: agent.lastName,
         phone: agent.phone,
         photo: agent.photo,
+        isVerified: agent.isVerified ?? false,
         isProfileComplete: agent.isProfileComplete ?? false,
       },
     });

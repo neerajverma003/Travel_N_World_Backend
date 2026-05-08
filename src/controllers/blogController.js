@@ -88,3 +88,14 @@ export const updateBlog = async (req, res, next) => {
     next(new AppError("Failed to update blog", 500));
   }
 };
+// delete blog
+export const deleteBlog = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const blog = await Blog.findByIdAndDelete(id);
+    if (!blog) return next(new AppError("Blog not found", 404));
+    res.status(200).json({ success: true, message: "Blog deleted successfully" });
+  } catch (error) {
+    next(new AppError("Failed to delete blog", 500));
+  }
+};

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createBlog, getAllBlogs, getBlogBySlug, getBlogById, updateBlog } from "../controllers/blogController.js";
+import { createBlog, getAllBlogs, getBlogBySlug, getBlogById, updateBlog, deleteBlog } from "../controllers/blogController.js";
 import { requireAuth, requireRoles } from "../middlewares/auth.js";
 import { ROLES } from "../utils/constant.js";
 
@@ -13,5 +13,6 @@ router.put("/:id", requireAuth, requireRoles(ROLES.SUPERADMIN), validateBlog, va
 router.get("/", getAllBlogs); // Public
 router.get("/:slug", getBlogBySlug); // Public
 router.get("/id/:id", getBlogById); // Admin/Private fetch by ID
+router.delete("/:id", requireAuth, requireRoles(ROLES.SUPERADMIN), deleteBlog); // Only Admin
 
 export default router;

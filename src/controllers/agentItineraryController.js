@@ -240,10 +240,16 @@ export async function listAgentItineraries(req, res) {
       }
     }
 
-    if (type) filter.type = type.toLowerCase();
+    if (type && type !== "All") filter.type = type.toLowerCase();
+    
     if (destination) {
-      const destName = destination.replace(/-/g, " ");
-      filter.destination = new RegExp(`^${destName}$`, "i");
+      const searchStr = destination.replace(/-/g, " ");
+      filter.$or = [
+        { destination: { $regex: searchStr, $options: "i" } },
+        { title: { $regex: searchStr, $options: "i" } },
+        { city: { $regex: searchStr, $options: "i" } },
+        { country: { $regex: searchStr, $options: "i" } }
+      ];
     }
     if (classification) {
       const tags = toArray(classification);
