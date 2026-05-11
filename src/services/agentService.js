@@ -67,18 +67,23 @@ export const getAgentByEmail = async (email) => {
 /**
  * Get single agent by ID with reviews
  */
-export const getAgentById = async (id) => {
+export const getAgentById = async (id, publicOnly = false) => {
   let agent;
   const isObjectId = mongoose.Types.ObjectId.isValid(id);
 
   if (isObjectId) {
-    agent = await Agent.findById(id);
+    const filter = { _id: id };
+    if (publicOnly) filter.isActive = true;
+    agent = await Agent.findOne(filter);
   } else {
     // Search by company name (slug) or firstName/lastName if not an ObjectId
     const companyName = id.replace(/-/g, " ").trim();
     const nameParts = companyName.split(" ");
     
+    const baseFilter = publicOnly ? { isActive: true } : {};
+
     agent = await Agent.findOne({
+      ...baseFilter,
       $or: [
         { company: { $regex: new RegExp(`^${companyName}$`, "i") } },
         {
@@ -88,17 +93,22 @@ export const getAgentById = async (id) => {
           ]
         }
       ]
-    });
+    }).sort({ updatedAt: -1 }); // Prioritize recently updated agents if names collide
 
-    // Final fallback: Fuzzy match on company name (if first word matches)
+    // Final fallback: Fuzzy match on company name
     if (!agent && nameParts[0].length > 3) {
       agent = await Agent.findOne({
-        company: { $regex: new RegExp(nameParts[0], "i") }
-      });
+        ...baseFilter,
+        company: { $regex: new RegExp(`^${nameParts[0]}`, "i") }
+      }).sort({ updatedAt: -1 });
     }
   }
 
-  if (!agent) throw new AppError("Agent profile not found", 404);
+  if (!agent) {
+    console.log(`[DEBUG] Agent not found for ID: "${id}" (publicOnly: ${publicOnly})`);
+    console.log(`[DEBUG] Attempted company name: "${id.replace(/-/g, " ").trim()}"`);
+    throw new AppError("Agent profile not found or is currently inactive", 404);
+  }
   
   // Optionally fetch recent reviews
   const reviews = await AgentReview.find({ agentId: agent._id })
@@ -120,9 +130,15 @@ export const getAgentById = async (id) => {
 export const createAgent = async (data, loggedInUser) => {
   const normalizedEmail = typeof data.email === "string" ? data.email.toLowerCase().trim() : data.email;
   
-  // Check if user already exists
-  const existingUser = await User.findOne({ email: normalizedEmail });
-  if (existingUser) throw new AppError("An account with this email already exists", 400);
+  // Check if email already exists
+  const existingByEmail = await Agent.findOne({ email: normalizedEmail });
+  if (existingByEmail) throw new AppError("An agent with this email already exists", 400);
+
+  // Check if phone already exists
+  if (data.phone) {
+    const existingByPhone = await Agent.findOne({ phone: data.phone });
+    if (existingByPhone) throw new AppError("An agent with this phone number already exists", 400);
+  }
 
   const requestedRole = data.role || ROLES.AGENT;
   if (requestedRole === ROLES.ADMIN && loggedInUser.role !== ROLES.SUPERADMIN) {

@@ -39,9 +39,14 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const duplicate = await Agent.findOne({ email: emailValue });
-    if (duplicate) {
+    const emailDuplicate = await Agent.findOne({ email: emailValue });
+    if (emailDuplicate) {
       return res.status(400).json({ message: "Email already exists" });
+    }
+
+    const phoneDuplicate = await Agent.findOne({ phone: phoneValue });
+    if (phoneDuplicate) {
+      return res.status(400).json({ message: "Phone number already exists" });
     }
 
     const hashPass = await bcrypt.hash(password, 10);

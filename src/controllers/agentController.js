@@ -76,7 +76,9 @@ export const getPublicAgents = async (req, res, next) => {
 export const getAgentById = async (req, res, next) => {
   try {
     const { agentId } = req.params;
-    const result = await agentService.getAgentById(agentId);
+    // Check if this is a public route (mounted at /api/agents/public/...)
+    const isPublic = req.originalUrl.includes("/public/");
+    const result = await agentService.getAgentById(agentId, isPublic);
     
     const signedAgent = await signAgent(result.agent);
     

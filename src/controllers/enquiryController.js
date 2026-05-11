@@ -20,8 +20,8 @@ export const createEnquiry = async (req, res, next) => {
         if (agent) agentEmail = agent.email;
       }
       
-      // Send Emails (Background task - don't await to speed up response)
-      sendEnquiryEmail(enquiry, agentEmail).catch(err => {
+      // Send Emails (Background task)
+      sendEnquiryEmail(enquiry, agent).catch(err => {
         console.error("Delayed Email Error:", err);
       });
 
@@ -82,12 +82,31 @@ export const getAllEnquiries = async (req, res, next) => {
 export const getAgentEnquiries = async (req, res, next) => {
   try {
     const agentId = req.user.id; // From auth middleware
+    const agent = await (await import("../models/agent.js")).default.findById(agentId);
     const enquiries = await Enquiry.find({ agentId }).sort({ createdAt: -1 });
+
+    const isVerified = agent?.isVerified === true;
+
+    // Mask data if agent is NOT verified
+    const processedEnquiries = enquiries.map(e => {
+      const enquiry = e.toObject();
+      if (!isVerified) {
+        return {
+          ...enquiry,
+          name: (enquiry.name || "Customer").charAt(0) + "*****",
+          email: (enquiry.email || "").split("@")[0].charAt(0) + "****@" + (enquiry.email || "").split("@")[1],
+          phone: (enquiry.phone || "").substring(0, 2) + "******" + (enquiry.phone || "").substring(8),
+          isMasked: true
+        };
+      }
+      return enquiry;
+    });
 
     return res.status(200).json({
       success: true,
-      total: enquiries.length,
-      data: enquiries,
+      total: processedEnquiries.length,
+      isVerifiedAgent: isVerified,
+      data: processedEnquiries,
     });
   } catch (error) {
     console.error("Error fetching agent enquiries:", error);
