@@ -76,7 +76,7 @@ export const getAgentById = async (id, publicOnly = false) => {
     if (publicOnly) filter.isActive = true;
     agent = await Agent.findOne(filter);
   } else {
-    // Search by company name (slug) or firstName/lastName if not an ObjectId
+    // Search by slug first (most accurate), then fallback to company name
     const companyName = id.replace(/-/g, " ").trim();
     const nameParts = companyName.split(" ");
     
@@ -85,6 +85,7 @@ export const getAgentById = async (id, publicOnly = false) => {
     agent = await Agent.findOne({
       ...baseFilter,
       $or: [
+        { slug: id.toLowerCase() }, // Direct slug match
         { company: { $regex: new RegExp(`^${companyName}$`, "i") } },
         {
           $and: [
@@ -93,9 +94,9 @@ export const getAgentById = async (id, publicOnly = false) => {
           ]
         }
       ]
-    }).sort({ updatedAt: -1 }); // Prioritize recently updated agents if names collide
+    }).sort({ updatedAt: -1 });
 
-    // Final fallback: Fuzzy match on company name
+    // Final fallback: Fuzzy match on company name if still not found
     if (!agent && nameParts[0].length > 3) {
       agent = await Agent.findOne({
         ...baseFilter,
@@ -106,7 +107,6 @@ export const getAgentById = async (id, publicOnly = false) => {
 
   if (!agent) {
     console.log(`[DEBUG] Agent not found for ID: "${id}" (publicOnly: ${publicOnly})`);
-    console.log(`[DEBUG] Attempted company name: "${id.replace(/-/g, " ").trim()}"`);
     throw new AppError("Agent profile not found or is currently inactive", 404);
   }
   

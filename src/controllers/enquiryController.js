@@ -9,15 +9,23 @@ import { sendEnquiryEmail } from "../utils/sendEmail.js";
  */
 export const createEnquiry = async (req, res, next) => {
   try {
-    const enquiry = await Enquiry.create(req.body);
+    // Create the enquiry
+    let enquiry = await Enquiry.create(req.body);
+    
+    // Populate itinerary details for the email
+    if (enquiry.itineraryId) {
+      enquiry = await Enquiry.findById(enquiry._id).populate("itineraryId");
+    }
+
+    const io =req.app.get('socketio');
+    io.emit('new-enquiry',enquiry);
 
     // ✅ Send Email to Superadmin & Agent
+    let agent = null;
     try {
-      let agentEmail = null;
       if (enquiry.agentId) {
-        const { default: Agent } = await import("../models/agent.js");
-        const agent = await Agent.findById(enquiry.agentId);
-        if (agent) agentEmail = agent.email;
+        const { default: AgentModel } = await import("../models/agent.js");
+        agent = await AgentModel.findById(enquiry.agentId);
       }
       
       // Send Emails (Background task)
@@ -132,5 +140,91 @@ export const deleteEnquiry = async (req, res, next) => {
   } catch (error) {
     console.error("Error deleting enquiry:", error);
     next(new AppError("Failed to delete enquiry", 500));
+  }
+};
+
+/**
+ * @desc Get buyable leads (leads from unverified agents)
+ * @route GET /api/enquiries/buy-leads
+ * @access Private (Agent)
+ */
+export const getBuyableLeads = async (req, res, next) => {
+  try {
+    const { default: Agent } = await import("../models/agent.js");
+
+    //1 for pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const skip = (page-1)*limit;
+
+
+    // 3 Define query: Show all enquiries that are not 'Booked'
+    const marketplaceQuery = {
+      status: { $ne: "Booked" }
+    };
+
+    // 4 get total count for pagination metadata
+    const total = await Enquiry.countDocuments(marketplaceQuery);
+
+    // 5 find enquiries with skip and limit
+    const enquires = await Enquiry.find(marketplaceQuery)
+      .populate("itineraryId")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+     
+    // send response
+    return res.status(200).json({
+      success:true,
+      total,
+      page,
+      limit,
+      totalPages:Math.ceil(total/limit),
+      data:enquires,
+    })
+
+  } catch (error) {
+    console.error("Error fetching buyable leads:", error);
+    next(new AppError("Failed to fetch buyable leads", 500));
+  }
+};
+
+/**
+ * @desc Update enquiry status (Agent/Admin)
+ * @route PATCH /api/enquiries/:id/status
+ * @access Private (Agent/Admin)
+ */
+export const updateEnquiryStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const { id } = req.params;
+
+    if (!["New", "Hot", "Follow-up", "Booked"].includes(status)) {
+      return next(new AppError("Invalid status value", 400));
+    }
+
+    const enquiry = await Enquiry.findById(id);
+    if (!enquiry) {
+      return next(new AppError("Enquiry not found", 404));
+    }
+
+    // Security: Only the assigned agent or an admin can update
+    // (Assuming req.user exists from auth middleware)
+    if (req.user.role !== 'admin' && enquiry.agentId?.toString() !== req.user.id) {
+      return next(new AppError("Not authorized to update this lead", 403));
+    }
+
+    enquiry.status = status;
+    await enquiry.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Lead status updated to ${status}`,
+      data: enquiry
+    });
+  } catch (error) {
+    console.error("Error updating enquiry status:", error);
+    next(new AppError("Failed to update status", 500));
   }
 };

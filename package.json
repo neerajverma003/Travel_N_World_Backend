@@ -32,6 +32,7 @@
     "otp-generator": "^4.0.1",
     "razorpay": "^2.9.6",
     "slugify": "^1.6.6",
+    "socket.io": "^4.8.3",
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {

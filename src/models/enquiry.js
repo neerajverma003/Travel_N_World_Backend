@@ -12,8 +12,9 @@ const enquirySchema = new Schema(
 
     company_name: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
+      default: "Customer Lead"
     },
 
     countryCode: {
@@ -26,20 +27,24 @@ const enquirySchema = new Schema(
     phone: {
       type: String,
       required: true,
-      match: [/^\d{7,12}$/, "Please enter a valid phone number"],
+      match: [/^\d{7,15}$/, "Please enter a valid phone number"],
     },
 
     email: {
       type: String,
-      required: true,
+      required: false, // Made optional to match frontend logic
       trim: true,
       lowercase: true,
-      match: [/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/, "Invalid email format"],
     },
 
     location: {
       type: String,
       required: true,
+      trim: true,
+    },
+
+    fromCity: {
+      type: String,
       trim: true,
     },
 
@@ -49,11 +54,43 @@ const enquirySchema = new Schema(
       default: "",
     },
 
+    /* ── Travel Details ── */
+    travelDate: Date,
+    travelDuration: { type: Number, default: 4 },
+    adults: { type: Number, default: 1 },
+    children: { type: Number, default: 0 },
+    infants: { type: Number, default: 0 },
+    rooms: { type: Number, default: 1 },
+    budget: { type: Number, default: 0 },
+    hotelCategory: { type: String, default: "Standard" },
+    tripCategory: { type: String, default: "family" },
+    travelWith: { type: String, default: "Spouse" },
+    
+    ticketBooked: { type: String, default: "No" },
+    ticketRequired: { type: String, default: "No" },
+    transportMode: { type: String, default: "Select Transport" },
+    ticketCategory: { type: String, default: "Select Ticket Category" },
+    bookingTimeline: { type: String, default: "Just Exploring" },
+
+    /* ── Step 3 Personal Profile ── */
+    dob: Date,
+    gender: String,
+    maritalStatus: String,
+    monthlyIncome: String,
+    nationality: { type: String, default: "India" },
+
+    status: {
+      type: String,
+      enum: ["New", "Hot", "Follow-up", "Booked"],
+      default: "New"
+    },
+    source: { type: String, default: "Premium Portal Lead" },
+
     /* ── Reference to Agent & Itinerary ───────────────────────────────── */
     agentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Agent",
-      required: false, // Optional for global enquiries, but used for agent leads
+      required: false,
     },
     itineraryId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -68,11 +105,11 @@ const enquirySchema = new Schema(
     agree: {
       type: Boolean,
       required: true,
-      default: false,
+      default: true,
     },
   },
   {
-    timestamps: true, // adds createdAt and updatedAt
+    timestamps: true,
   }
 );
 

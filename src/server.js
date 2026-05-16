@@ -20,6 +20,7 @@ import agentItineraryRoutes from "./routes/agentItineraryRoutes.js";
 import adminSettingsRoutes from "./routes/adminSettingsRoutes.js";
 import heroVideoRoutes from './routes/heroVideoRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import teamRoutes from './routes/teamRoutes.js';
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use("/api/agent-itineraries", agentItineraryRoutes);
 app.use("/api/admin-settings", adminSettingsRoutes);
 app.use('/api/hero-videos',heroVideoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/team', teamRoutes);
 
 // Global error handler
 app.use(errorHandler);

@@ -24,6 +24,7 @@ const agentSchema = new Schema(
     // Basic Info
     firstName: { type: String, trim: true },
     lastName: { type: String, trim: true },
+    slug: { type: String, unique: true, lowercase: true, trim: true },
     email: { type: String, unique: true, lowercase: true, trim: true },
     password: { type: String, select: false },
     phone: { type: String },
@@ -33,6 +34,13 @@ const agentSchema = new Schema(
     role: { type: String, enum: Object.values(ROLES), default: ROLES.AGENT },
     isActive: { type: Boolean, default: true },
     isVerified: { type: Boolean, default: false },
+
+    // Team Hierarchy
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Agent",
+      default: null
+    },
 
     // Company Info
     company: { type: String, trim: true },
@@ -118,6 +126,16 @@ agentSchema.pre("save", async function (next) {
       this.password = await bcrypt.hash(this.password, SALT_ROUNDS);
     }
   }
+
+  // Generate slug if not present
+  if (!this.slug && (this.firstName || this.company)) {
+    const base = this.company || `${this.firstName} ${this.lastName}`;
+    this.slug = base
+      .toLowerCase()
+      .replace(/[^\w ]+/g, "")
+      .replace(/ +/g, "-") + "-" + Math.random().toString(36).substring(2, 7);
+  }
+
   if (!this.registeredEmail) this.registeredEmail = this.email;
   if (this.isProfileComplete && !this.profileCompletedAt) this.profileCompletedAt = new Date();
   next();

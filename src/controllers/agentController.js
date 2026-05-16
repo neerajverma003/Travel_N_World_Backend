@@ -4,6 +4,9 @@ import { getPresignedViewUrl } from "../services/s3Service.js";
 import AgentReview from "../models/AgentReview.js";
 import { signAgent, signReview } from "../utils/agentUtils.js";
 import { ROLES } from "../utils/constant.js";
+import { Enquiry } from "../models/enquiry.js";
+import { AgentItinerary } from "../models/AgentItinerary.js";
+import Agent from "../models/Agent.js";
 
 /**
  * Get all agents (Admin only)
@@ -11,7 +14,7 @@ import { ROLES } from "../utils/constant.js";
 export const getAllAgents = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 1000;
     const { role, search } = req.query;
 
     const result = await agentService.getAllAgents(page, limit, role, search);
@@ -122,6 +125,18 @@ export const updateAgent = async (req, res, next) => {
     const result = await agentService.updateAgent(agentId, req.body, req.user);
 
     const signedAgent = await signAgent(result.agent);
+
+    // socket.io:Realtime update for verification status
+    const io = req.app.get("socketio");
+    if(io){
+      io.emit("agent-status-updated",{
+        agentId:signedAgent._id,
+        isVerified:signedAgent.isVerified,
+      })
+    }
+
+    
+
     res.status(200).json({
       success: true,
       message: result.message,
@@ -313,6 +328,82 @@ export const deleteReview = async (req, res, next) => {
 
     await AgentReview.findByIdAndDelete(reviewId);
     res.status(200).json({ success: true, message: "Review deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+/**
+ * Get report statistics for the logged-in agent
+ */
+export const getAgentReport = async (req, res, next) => {
+  try {
+    // 1. Find the agent profile for this user
+    const agentProfile = await Agent.findOne({ email: req.user.email });
+    if (!agentProfile) throw new AppError("Agent profile not found", 404);
+
+    const agentId = agentProfile._id;
+
+    // 2. Aggregate statistics from Enquiries
+    // Total Leads, Total Booked
+    const leads = await Enquiry.find({ agentId });
+    const totalLeads = leads.length;
+    const bookedLeads = leads.filter(l => l.status === "Booked");
+    const totalBooked = bookedLeads.length;
+
+    // 3. Calculate Revenue (Sum of discountedPrice for booked itineraries)
+    // We need to look up the itinerary prices for booked leads
+    let totalRevenue = 0;
+    for (const lead of bookedLeads) {
+      if (lead.itineraryId) {
+        const itinerary = await AgentItinerary.findById(lead.itineraryId);
+        if (itinerary) {
+          totalRevenue += itinerary.discountedPrice || 0;
+        }
+      }
+    }
+
+    // 4. Group data by day for the "Conversion Report" table (Last 30 days)
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+
+    const dailyStats = await Enquiry.aggregate([
+      { 
+        $match: { 
+          agentId, 
+          createdAt: { $gte: last30Days } 
+        } 
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          leads: { $sum: 1 },
+          booked: { $sum: { $cond: [{ $eq: ["$status", "Booked"] }, 1, 0] } }
+        }
+      },
+      { $sort: { _id: -1 } }
+    ]);
+
+    // Format daily stats for the frontend
+    const reports = dailyStats.map(day => ({
+      date: day._id,
+      totalLeads: day.leads,
+      totalBooked: day.booked,
+      revenue: 0, // In a real system, you might join with itinerary prices here
+      conversion: day.leads > 0 ? ((day.booked / day.leads) * 100).toFixed(2) : 0
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: {
+          totalLeads,
+          totalBooked,
+          totalRevenue,
+          currency: "₹"
+        },
+        reports
+      }
+    });
   } catch (error) {
     next(error);
   }
