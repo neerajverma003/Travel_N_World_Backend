@@ -61,8 +61,15 @@ export const getAllEnquiries = async (req, res, next) => {
   try {
     const { agentId } = req.query;
     let query = {};
-    
-    if (agentId) {
+    const userRole = req.user.role;
+    const userId = req.user.id;
+
+    if (userRole === "RM") {
+      const { default: AgentModel } = await import("../models/agent.js");
+      const myAgents = await AgentModel.find({ relationshipManagerId: userId }).select("_id");
+      const agentIds = myAgents.map(a => a._id);
+      query.agentId = { $in: agentIds };
+    } else if (agentId) {
       // If agentId is provided, show only that agent's leads
       query.agentId = agentId;
     } else {
@@ -70,7 +77,9 @@ export const getAllEnquiries = async (req, res, next) => {
       query.$or = [{ agentId: null }, { agentId: { $exists: false } }];
     }
 
-    const enquiries = await Enquiry.find(query).sort({ createdAt: -1 });
+    const enquiries = await Enquiry.find(query)
+      .populate("agentId", "firstName lastName company email")
+      .sort({ createdAt: -1 });
     return res.status(200).json({
       success: true,
       total: enquiries.length,

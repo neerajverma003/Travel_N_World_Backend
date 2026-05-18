@@ -10,6 +10,51 @@ export const getDashboardStats = async (req, res) => {
     const userRole = req.user.role;
     const userId = req.user.id;
 
+    if (userRole === ROLES.RM) {
+      // Stats for Relationship Manager
+      const myAgents = await Agent.find({ relationshipManagerId: userId }).select("_id");
+      const agentIds = myAgents.map(a => a._id);
+
+      const [
+        totalAgents,
+        totalEnquiries,
+        latestEnquiries,
+        latestAgents
+      ] = await Promise.all([
+        Agent.countDocuments({ relationshipManagerId: userId, role: ROLES.AGENT }),
+        Enquiry.countDocuments({ agentId: { $in: agentIds } }),
+        Enquiry.find({ agentId: { $in: agentIds } }).sort({ createdAt: -1 }).limit(3),
+        Agent.find({ relationshipManagerId: userId, role: ROLES.AGENT }).sort({ createdAt: -1 }).limit(3)
+      ]);
+
+      const activities = [
+        ...latestEnquiries.map(e => ({
+          activity: `New Lead for assigned Agent: ${e.name}`,
+          user: e.email,
+          time: e.createdAt,
+          status: "Success"
+        })),
+        ...latestAgents.map(a => ({
+          activity: `New Agent Onboarded: ${a.company || a.firstName}`,
+          user: a.email,
+          time: a.createdAt,
+          status: "Success"
+        }))
+      ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 5);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalAgents,
+          totalAdmins: 0, // RM can't see other admins
+          totalItineraries: 0, // RM doesn't manage global itineraries
+          totalEnquiries,
+          activities,
+          successRate: "99%"
+        }
+      });
+    }
+
     if (userRole === ROLES.AGENT) {
       // Stats for Agent
       const [

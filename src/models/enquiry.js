@@ -102,6 +102,30 @@ const enquirySchema = new Schema(
       trim: true,
     },
 
+    destination:{
+      type:String,
+      required:false
+    },
+    destinationType:{
+      type:String,
+      required:false
+    },
+    days:{
+     type:String,
+     required:false
+    },
+    purpose:{
+      type:String,
+      required:false
+    },
+    consultation:{
+     type:String,
+     default:""
+    },
+    budgetRange: { 
+      type: String, 
+      required: false 
+    },
     agree: {
       type: Boolean,
       required: true,

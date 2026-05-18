@@ -51,12 +51,24 @@ export const loginAdminCredential = async (req, res) => {
         .json({ message: "Email, password, and role are required" });
     }
 
-    const credential = await AdminLoginCredential.findOne({
-      email: email.toLowerCase().trim(),
-    }).select("+password");
+    let credential;
+    
+    if (role.toUpperCase() === "RM") {
+      // Check in Agent collection for RM role
+      const Agent = (await import("../models/Agent.js")).default;
+      credential = await Agent.findOne({ 
+        email: email.toLowerCase().trim(),
+        role: "RM"
+      }).select("+password");
+    } else {
+      // Check in AdminLoginCredential for other admin roles
+      credential = await AdminLoginCredential.findOne({
+        email: email.toLowerCase().trim(),
+      }).select("+password");
+    }
 
     if (!credential) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Invalid credentials or role mismatch" });
     }
 
     const isMatch = await bcrypt.compare(password, credential.password);

@@ -184,7 +184,9 @@ export const verifyOTP = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const agent = await Agent.findById(req.user.id).select("-password");
+    const agent = await Agent.findById(req.user.id)
+      .select("-password")
+      .populate("relationshipManagerId", "firstName lastName email phone photo");
     if (!agent) {
       return res.status(404).json({ message: "Profile not found" });
     }

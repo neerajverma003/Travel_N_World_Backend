@@ -29,6 +29,13 @@ const agentSchema = new Schema(
     password: { type: String, select: false },
     phone: { type: String },
     whatsapp: String,
+    // Relationship Manager link
+    relationshipManagerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Agent',
+    default: null
+    },
+
 
     // Auth & Status
     role: { type: String, enum: Object.values(ROLES), default: ROLES.AGENT },
@@ -103,7 +110,8 @@ const agentSchema = new Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
-  }
+  },
+  
 );
 
 // Virtual for profile completeness
@@ -117,6 +125,8 @@ agentSchema.virtual("isProfileComplete").get(function () {
     this.companyAddress?.postalCode
   );
 });
+
+
 
 // Pre-save hook to hash password and sync emails
 agentSchema.pre("save", async function (next) {

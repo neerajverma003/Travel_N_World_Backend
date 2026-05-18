@@ -12,10 +12,13 @@ const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS || "10", 10);
 /**
  * Get all agents with filters and pagination
  */
-export const getAllAgents = async (page = 1, limit = 10, role, search = "") => {
+export const getAllAgents = async (page = 1, limit = 10, role, search = "", currentUser) => {
   const query = {};
-  if (role && Object.values(ROLES).includes(role.toUpperCase())) {
-    query.role = role.toUpperCase();
+  if (currentUser && (currentUser.role || "").toUpperCase() === ROLES.RM) {
+    query.relationshipManagerId = currentUser.id || currentUser._id;
+  }
+  if (role) {
+    query.role = { $regex: new RegExp(`^${role}$`, "i") };
   }
   
   if (search) {
@@ -29,6 +32,7 @@ export const getAllAgents = async (page = 1, limit = 10, role, search = "") => {
   
   const total = await Agent.countDocuments(query);
   const agents = await Agent.find(query)
+    .populate("relationshipManagerId", "firstName lastName company email")
     .skip((page - 1) * limit)
     .limit(limit)
     .sort({ createdAt: -1 });
@@ -129,6 +133,10 @@ export const getAgentById = async (id, publicOnly = false) => {
  */
 export const createAgent = async (data, loggedInUser) => {
   const normalizedEmail = typeof data.email === "string" ? data.email.toLowerCase().trim() : data.email;
+
+  if (loggedInUser && (loggedInUser.role || "").toUpperCase() === ROLES.RM) {
+    data.relationshipManagerId = loggedInUser.id || loggedInUser._id;
+  }
   
   // Check if email already exists
   const existingByEmail = await Agent.findOne({ email: normalizedEmail });

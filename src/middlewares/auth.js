@@ -38,6 +38,7 @@ export function requireAuth(req, res, next) {
 const roleHierarchy = {
   [ROLES.SUPERADMIN]: 3,
   [ROLES.ADMIN]: 2,
+  [ROLES.RM]: 2, // RM has similar level access as Admin for their agents
   [ROLES.AGENT]: 1,
 };
 

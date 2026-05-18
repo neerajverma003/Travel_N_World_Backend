@@ -17,7 +17,7 @@ export const getAllAgents = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 1000;
     const { role, search } = req.query;
 
-    const result = await agentService.getAllAgents(page, limit, role, search);
+    const result = await agentService.getAllAgents(page, limit, role, search,req.user);
 
     const signedAgents = await Promise.all(
       result.agents.map((agent) => signAgent(agent))
@@ -134,8 +134,6 @@ export const updateAgent = async (req, res, next) => {
         isVerified:signedAgent.isVerified,
       })
     }
-
-    
 
     res.status(200).json({
       success: true,
