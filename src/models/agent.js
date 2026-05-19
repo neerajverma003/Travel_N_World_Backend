@@ -42,6 +42,11 @@ const agentSchema = new Schema(
     isActive: { type: Boolean, default: true },
     isVerified: { type: Boolean, default: false },
 
+    // Admin approval status
+    verificationStartDate:{type:Date,default:null},
+    verificationEndDate:{type:Date,default:null},
+
+
     // Team Hierarchy
     parentId: {
       type: mongoose.Schema.Types.ObjectId,

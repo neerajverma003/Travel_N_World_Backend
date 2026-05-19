@@ -47,11 +47,24 @@ export const getAllAgents = async (page = 1, limit = 10, role, search = "", curr
  * Get all active agents for public display
  */
 export const getVerifiedAgents = async () => {
-  return await Agent.find({ isVerified: true, isActive: true })
-    .select("-password -registeredEmail -isActive")
-    .sort({ rating: -1, createdAt: -1 });
+  const now = new Date();
+  return await Agent.find({
+    isVerified: true,
+    isActive: true,
+    $or: [
+      {
+        verificationStartDate: { $lte: now },
+        verificationEndDate: { $gte: now }
+      },
+      {
+        verificationStartDate: null,
+        verificationEndDate: null
+      } // Backward compatibility (purane records ke liye)
+    ]
+  })
+  .select("-password -registeredEmail -isActive")
+  .sort({ rating: -1, createdAt: -1 });
 };
-
 /**
  * Get all active agents for public display
  */
@@ -214,6 +227,8 @@ export const updateAgent = async (id, updateData, loggedInUser) => {
     delete updateData.role;
     delete updateData.isVerified;
     delete updateData.isActive;
+    delete updateData.verificationStartDate;
+    delete updateData.verificationEndDate;
   }
 
   // Dynamically map frontend keys to match Database schema
