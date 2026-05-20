@@ -9,16 +9,29 @@ import { cleanS3Data } from "../utils/agentUtils.js";
 
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS || "10", 10);
 
-/**
- * Get all agents with filters and pagination
- */
-export const getAllAgents = async (page = 1, limit = 10, role, search = "", currentUser) => {
+export const getAllAgents = async (page = 1, limit = 10, role, search = "", currentUser, agentCategory) => {
   const query = {};
-  if (currentUser && (currentUser.role || "").toUpperCase() === ROLES.RM) {
+  const userRole = (currentUser?.role || "").toUpperCase();
+  if (currentUser && userRole === ROLES.RM) {
     query.relationshipManagerId = currentUser.id || currentUser._id;
+  } else if (currentUser && userRole === ROLES.AGENT) {
+    query._id = currentUser.id || currentUser._id;
   }
   if (role) {
     query.role = { $regex: new RegExp(`^${role}$`, "i") };
+  }
+  
+  // Default to Travel agents for role=AGENT if category is not explicitly specified
+  const normalizedRole = (role || "").toUpperCase();
+  if (normalizedRole === ROLES.AGENT || !role) {
+    if (!agentCategory || agentCategory === "Travel") {
+      query.agentCategory = { $ne: "Transport" }; // matches "Travel" and documents without agentCategory
+    } else if (agentCategory === "Transport") {
+      query.agentCategory = "Transport";
+    }
+    // If agentCategory is "All", we do not apply agentCategory query filter.
+  } else if (agentCategory && agentCategory !== "All") {
+    query.agentCategory = agentCategory;
   }
   
   if (search) {
@@ -46,9 +59,9 @@ export const getAllAgents = async (page = 1, limit = 10, role, search = "", curr
 /**
  * Get all active agents for public display
  */
-export const getVerifiedAgents = async () => {
+export const getVerifiedAgents = async (category = "Travel") => {
   const now = new Date();
-  return await Agent.find({
+  const query = {
     isVerified: true,
     isActive: true,
     $or: [
@@ -61,15 +74,31 @@ export const getVerifiedAgents = async () => {
         verificationEndDate: null
       } // Backward compatibility (purane records ke liye)
     ]
-  })
+  };
+
+  if (category === "Travel") {
+    query.agentCategory = { $ne: "Transport" };
+  } else if (category === "Transport") {
+    query.agentCategory = "Transport";
+  }
+
+  return await Agent.find(query)
   .select("-password -registeredEmail -isActive")
   .sort({ rating: -1, createdAt: -1 });
 };
 /**
  * Get all active agents for public display
  */
-export const getPublicAgents = async () => {
-  return await Agent.find({ isActive: true, isVerified: false })
+export const getPublicAgents = async (category = "Travel") => {
+  const query = { isActive: true, isVerified: false };
+
+  if (category === "Travel") {
+    query.agentCategory = { $ne: "Transport" };
+  } else if (category === "Transport") {
+    query.agentCategory = "Transport";
+  }
+
+  return await Agent.find(query)
     .select("-password -registeredEmail -isActive")
     .sort({ rating: -1, createdAt: -1 });
 };

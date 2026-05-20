@@ -56,6 +56,7 @@ export const register = async (req, res) => {
       email: emailValue,
       password: hashPass,
       phone: phoneValue,
+      agentCategory: req.body.agentCategory || "Travel",
     };
     const admin = new Agent(adminObj);
     await admin.save();
@@ -107,7 +108,7 @@ export const login = async (req, res) => {
       return res.json({
         success: true,
         accessToken,
-        user: { _id: admin._id, email: admin.email, role: admin.role, isProfileComplete: true, },
+        user: { _id: admin._id, email: admin.email, role: admin.role, agentCategory: admin.agentCategory || "Travel", isProfileComplete: true, },
       });
     }
     
@@ -167,6 +168,7 @@ export const verifyOTP = async (req, res) => {
         _id: admin._id,
         email: admin.email,
         role: admin.role,
+        agentCategory: admin.agentCategory || "Travel",
         firstName: admin.firstName,
         lastName: admin.lastName,
         phone: admin.phone,

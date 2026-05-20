@@ -12,19 +12,23 @@ export const getDashboardStats = async (req, res) => {
 
     if (userRole === ROLES.RM) {
       // Stats for Relationship Manager
-      const myAgents = await Agent.find({ relationshipManagerId: userId }).select("_id");
+      const myAgents = await Agent.find({ relationshipManagerId: userId }).select("_id agentCategory");
       const agentIds = myAgents.map(a => a._id);
+      const travelAgentIds = myAgents.filter(a => a.agentCategory !== "Transport").map(a => a._id);
+      const transportAgentIds = myAgents.filter(a => a.agentCategory === "Transport").map(a => a._id);
 
       const [
         totalAgents,
+        totalTransport,
         totalEnquiries,
         latestEnquiries,
         latestAgents
       ] = await Promise.all([
-        Agent.countDocuments({ relationshipManagerId: userId, role: ROLES.AGENT }),
+        Agent.countDocuments({ relationshipManagerId: userId, role: ROLES.AGENT, agentCategory: { $ne: "Transport" } }),
+        Agent.countDocuments({ relationshipManagerId: userId, role: ROLES.AGENT, agentCategory: "Transport" }),
         Enquiry.countDocuments({ agentId: { $in: agentIds } }),
-        Enquiry.find({ agentId: { $in: agentIds } }).sort({ createdAt: -1 }).limit(3),
-        Agent.find({ relationshipManagerId: userId, role: ROLES.AGENT }).sort({ createdAt: -1 }).limit(3)
+        Enquiry.find({ agentId: { $in: agentIds } }).sort({ createdAt: -1 }).limit(10),
+        Agent.find({ relationshipManagerId: userId, role: ROLES.AGENT }).sort({ createdAt: -1 }).limit(10)
       ]);
 
       const activities = [
@@ -35,19 +39,20 @@ export const getDashboardStats = async (req, res) => {
           status: "Success"
         })),
         ...latestAgents.map(a => ({
-          activity: `New Agent Onboarded: ${a.company || a.firstName}`,
+          activity: `New ${a.agentCategory || "Travel"} Agent Onboarded: ${a.company || a.firstName}`,
           user: a.email,
           time: a.createdAt,
           status: "Success"
         }))
-      ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 5);
+      ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 20);
 
       return res.status(200).json({
         success: true,
         data: {
           totalAgents,
-          totalAdmins: 0, // RM can't see other admins
-          totalItineraries: 0, // RM doesn't manage global itineraries
+          totalTransport,
+          totalAdmins: 0,
+          totalItineraries: 0,
           totalEnquiries,
           activities,
           successRate: "99%"
@@ -64,7 +69,7 @@ export const getDashboardStats = async (req, res) => {
       ] = await Promise.all([
         import("../models/AgentItinerary.js").then(m => m.AgentItinerary.countDocuments({ agentId: userId })),
         Enquiry.countDocuments({ agentId: userId }),
-        Enquiry.find({ agentId: userId }).sort({ createdAt: -1 }).limit(5)
+        Enquiry.find({ agentId: userId }).sort({ createdAt: -1 }).limit(20)
       ]);
 
       const activities = latestEnquiries.map(e => ({
@@ -77,8 +82,8 @@ export const getDashboardStats = async (req, res) => {
       return res.status(200).json({
         success: true,
         data: {
-          totalAgents: 0, // Not relevant for agent
-          totalAdmins: 0, // Not relevant for agent
+          totalAgents: 0,
+          totalAdmins: 0,
           totalItineraries,
           totalEnquiries,
           activities,
@@ -90,18 +95,20 @@ export const getDashboardStats = async (req, res) => {
     // Default Stats for Superadmin
     const [
       totalAgents,
+      totalTransport,
       totalAdmins,
       totalItineraries,
       totalEnquiries,
       latestEnquiries,
       latestAgents
     ] = await Promise.all([
-      Agent.countDocuments({ role: ROLES.AGENT }),
+      Agent.countDocuments({ role: ROLES.AGENT, agentCategory: { $ne: "Transport" } }),
+      Agent.countDocuments({ role: ROLES.AGENT, agentCategory: "Transport" }),
       AdminLoginCredential.countDocuments({ role: { $in: [ROLES.SUPERADMIN, ROLES.ADMIN] } }),
       Itinerary.countDocuments(),
       Enquiry.countDocuments(),
-      Enquiry.find().sort({ createdAt: -1 }).limit(3),
-      Agent.find({ role: ROLES.AGENT }).sort({ createdAt: -1 }).limit(3)
+      Enquiry.find().sort({ createdAt: -1 }).limit(10),
+      Agent.find({ role: ROLES.AGENT }).sort({ createdAt: -1 }).limit(10)
     ]);
 
     const activities = [
@@ -112,22 +119,27 @@ export const getDashboardStats = async (req, res) => {
         status: "Success"
       })),
       ...latestAgents.map(a => ({
-        activity: `New Agent registered: ${a.company || a.firstName}`,
+        activity: `New ${a.agentCategory || "Travel"} partner registered: ${a.company || a.firstName}`,
         user: a.email,
         time: a.createdAt,
         status: "Success"
       }))
-    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 5);
+    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 20);
+
+    const superadmin = await AdminLoginCredential.findById(userId);
+    const notificationsEnabled = superadmin ? superadmin.notificationsEnabled : true;
 
     res.status(200).json({
       success: true,
       data: {
         totalAgents,
+        totalTransport,
         totalAdmins,
         totalItineraries,
         totalEnquiries,
         activities,
-        successRate: "99%" 
+        successRate: "99%",
+        notificationsEnabled
       }
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { Enquiry } from "../models/enquiry.js";
 import { AppError } from "../utils/errorHandler.js";
 import { sendEnquiryEmail } from "../utils/sendEmail.js";
+import { Notification } from "../models/Notification.js";
 
 /**
  * @desc Create a new enquiry (Public/User)
@@ -18,9 +19,77 @@ export const createEnquiry = async (req, res, next) => {
     }
 
     const io =req.app.get('socketio');
+
+    // Craete Notification for SuperAdminnAnd Rm In DB
+
+        // 🔔 Create notifications for Superadmin and RM in DB
+    try {
+      const { default: AgentModel } = await import("../models/agent.js");
+      const notificationsToCreate = [];
+
+      // 1. Fetch Superadmins from adminslogincredentials collection
+      const { default: AdminLoginCredential } = await import("../models/adminLoginCredential.js");
+      const superadmins = await AdminLoginCredential.find({ role: "SUPERADMIN", notificationsEnabled: { $ne: false } });
+      console.log("📢 Found superadmins for notification:", superadmins.length);
+      superadmins.forEach((admin) => {
+        notificationsToCreate.push({
+          recipient: admin._id,
+          recipientRole: "SUPERADMIN",
+          title: "New Enquiry Received",
+          message: `New inquiry from ${enquiry.name} for ${enquiry.destination || 'Package'}.`,
+          sourceType: "ENQUIRY",
+          refId: enquiry._id,
+        });
+      });
+
+      // 2. Fetch Agent and their RM
+      if (enquiry.agentId) {
+        const agent = await AgentModel.findById(enquiry.agentId);
+        if (agent) {
+          // Notify Agent
+          notificationsToCreate.push({
+            recipient: agent._id,
+            recipientRole: "AGENT",
+            title: "New Lead",
+            message: `You received a new lead from ${enquiry.name}.`,
+            sourceType: "ENQUIRY",
+            refId: enquiry._id,
+          });
+
+          // Notify RM if mapped to agent
+          if (agent.relationshipManagerId) {
+            notificationsToCreate.push({
+              recipient: agent.relationshipManagerId,
+              recipientRole: "RM",
+              title: "New Lead for Managed Agent",
+              message: `Agent ${agent.company || agent.firstName} received a new lead from ${enquiry.name}.`,
+              sourceType: "ENQUIRY",
+              refId: enquiry._id,
+            });
+          }
+        }
+      }
+
+      // Bulk save to Database
+      console.log("📢 Total notifications to create:", notificationsToCreate.length);
+      if (notificationsToCreate.length > 0) {
+        const saved = await Notification.insertMany(notificationsToCreate);
+        // Emit real-time notification event to all connected clients
+        const io = req.app.get('socketio');
+        if (io) {
+          io.emit('new-notification', { notifications: notificationsToCreate });
+        }
+        console.log("✅ Notifications saved:", saved.length);
+      } else {
+        console.log("⚠️ No notifications to create - superadmins array was empty");
+      }
+    } catch (notifErr) {
+      console.error("❌ Failed to generate DB notifications:", notifErr);
+    }
+
     io.emit('new-enquiry',enquiry);
 
-    // ✅ Send Email to Superadmin & Agent
+    // Send Email to Superadmin & Agent
     let agent = null;
     try {
       if (enquiry.agentId) {

@@ -23,6 +23,10 @@ const adminLoginCredentialSchema = new Schema(
       required: true,
       default: "SUPERADMIN",
     },
+    notificationsEnabled: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

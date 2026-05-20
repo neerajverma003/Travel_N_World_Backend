@@ -1,4 +1,5 @@
 import { Contact } from "../models/Contact.js";
+import { Notification } from "../models/Notification.js";
 
 // Create a new contact inquiry
 export const createContactInquiry = async (req, res) => {
@@ -12,6 +13,26 @@ export const createContactInquiry = async (req, res) => {
       email,
       description
     });
+
+    // 🔔 Notify all Superadmins about new Contact Us submission
+    try {
+      const { default: AdminLoginCredential } = await import("../models/adminLoginCredential.js");
+      const superadmins = await AdminLoginCredential.find({ role: "SUPERADMIN", notificationsEnabled: { $ne: false } });
+      
+      if (superadmins.length > 0) {
+        const notifs = superadmins.map((admin) => ({
+          recipient: admin._id,
+          recipientRole: "SUPERADMIN",
+          title: "New Contact Us Message",
+          message: `${firstName} ${lastName} sent a contact message: "${(description || "").slice(0, 60)}..."`,
+          sourceType: "CONTACT",
+          refId: newContact._id,
+        }));
+        await Notification.insertMany(notifs);
+      }
+    } catch (notifErr) {
+      console.error("Contact notification error:", notifErr);
+    }
 
     res.status(201).json({
       success: true,

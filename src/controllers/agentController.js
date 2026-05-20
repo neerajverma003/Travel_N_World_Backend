@@ -15,9 +15,9 @@ export const getAllAgents = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 1000;
-    const { role, search } = req.query;
+    const { role, search, agentCategory } = req.query;
 
-    const result = await agentService.getAllAgents(page, limit, role, search,req.user);
+    const result = await agentService.getAllAgents(page, limit, role, search, req.user, agentCategory);
 
     const signedAgents = await Promise.all(
       result.agents.map((agent) => signAgent(agent))
@@ -38,7 +38,8 @@ export const getAllAgents = async (req, res, next) => {
  */
 export const getVerifiedAgents = async (req, res, next) => {
   try {
-    const agents = await agentService.getVerifiedAgents();
+    const { category } = req.query;
+    const agents = await agentService.getVerifiedAgents(category || "Travel");
     
     const signedAgents = await Promise.all(
       agents.map((agent) => signAgent(agent))
@@ -58,7 +59,8 @@ export const getVerifiedAgents = async (req, res, next) => {
  */
 export const getPublicAgents = async (req, res, next) => {
   try {
-    const agents = await agentService.getPublicAgents();
+    const { category } = req.query;
+    const agents = await agentService.getPublicAgents(category || "Travel");
     
     const signedAgents = await Promise.all(
       agents.map((agent) => signAgent(agent))

@@ -21,6 +21,7 @@ import adminSettingsRoutes from "./routes/adminSettingsRoutes.js";
 import heroVideoRoutes from './routes/heroVideoRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use("/api/admin-settings", adminSettingsRoutes);
 app.use('/api/hero-videos',heroVideoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Global error handler
 app.use(errorHandler);
