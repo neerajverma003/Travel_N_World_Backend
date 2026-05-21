@@ -6,7 +6,7 @@ import { signAgent, signReview } from "../utils/agentUtils.js";
 import { ROLES } from "../utils/constant.js";
 import { Enquiry } from "../models/enquiry.js";
 import { AgentItinerary } from "../models/AgentItinerary.js";
-import Agent from "../models/Agent.js";
+import Agent from "../models/agent.js";
 
 /**
  * Get all agents (Admin only)
