@@ -60,7 +60,9 @@ export const getVerifiedAgents = async (req, res, next) => {
 export const getPublicAgents = async (req, res, next) => {
   try {
     const { category } = req.query;
-    const agents = await agentService.getPublicAgents(category || "Travel");
+    // If no category or "All", pass "All" so service shows every category
+    const resolvedCategory = (!category || category === "All") ? "All" : category;
+    const agents = await agentService.getPublicAgents(resolvedCategory);
     
     const signedAgents = await Promise.all(
       agents.map((agent) => signAgent(agent))

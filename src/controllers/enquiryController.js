@@ -141,13 +141,12 @@ export const getAllEnquiries = async (req, res, next) => {
     } else if (agentId) {
       // If agentId is provided, show only that agent's leads
       query.agentId = agentId;
-    } else {
-      // If no agentId is provided, show ONLY global leads (where agentId is null or doesn't exist)
-      query.$or = [{ agentId: null }, { agentId: { $exists: false } }];
     }
+    // Note: We removed the restriction that only showed global leads to SuperAdmins.
+    // SuperAdmins should be able to see all leads in the Transport/Customer Inquiries table.
 
     const enquiries = await Enquiry.find(query)
-      .populate("agentId", "firstName lastName company email")
+      .populate("agentId", "firstName lastName company email agentCategory")
       .sort({ createdAt: -1 });
     return res.status(200).json({
       success: true,

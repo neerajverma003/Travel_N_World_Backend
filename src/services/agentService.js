@@ -97,6 +97,7 @@ export const getPublicAgents = async (category = "Travel") => {
   } else if (category === "Transport") {
     query.agentCategory = "Transport";
   }
+  // "All" — no agentCategory filter
 
   return await Agent.find(query)
     .select("-password -registeredEmail -isActive")

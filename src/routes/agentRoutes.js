@@ -58,22 +58,22 @@ router.post("/:agentId/reviews", validateReview, submitReview);
 // ==================== ADMIN ROUTES (ADMIN/SUPERADMIN) ====================
 
 // Get all agents (with pagination/search)
-router.get("/", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN), getAllAgents);
+router.get("/", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RM), getAllAgents);
 
 // Get specific agent (Admin view)
-router.get("/:agentId", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN), getAgentById);
+router.get("/:agentId", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RM), getAgentById);
 
 // Create new agent
-router.post("/", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN), validateAgent, createAgent);
+router.post("/", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RM), validateAgent, createAgent);
 
 // Update agent
-router.put("/:agentId", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT), updateAgent);
+router.put("/:agentId", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT, ROLES.RM), updateAgent);
 
 // Delete agent
-router.delete("/:agentId", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN), deleteAgent);
+router.delete("/:agentId", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RM), deleteAgent);
 
 // Toggle agent status (Active/Inactive)
-router.patch("/:agentId/status", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN), toggleAgentStatus);
+router.patch("/:agentId/status", requireAuth, requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RM), toggleAgentStatus);
 
 // ==================== REVIEW MANAGEMENT (SUPERADMIN & AGENT) ====================
 

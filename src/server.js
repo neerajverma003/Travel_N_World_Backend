@@ -22,6 +22,7 @@ import heroVideoRoutes from './routes/heroVideoRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import transportRouteRoutes from './routes/transportRouteRoutes.js';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api/hero-videos',heroVideoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/transport-routes', transportRouteRoutes);
 
 // Global error handler
 app.use(errorHandler);
