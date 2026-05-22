@@ -44,7 +44,7 @@ async function startServer() {
 
     // Start Express server
     server.listen(PORT, () => {
-      console.log(`Server and socket  are  running on http://localhost:${PORT}`);
+      console.log(`Server and socket  are  running on ${PORT}`);
     });
   } catch (err) {
     console.error(" Failed to start server:", err.message);
