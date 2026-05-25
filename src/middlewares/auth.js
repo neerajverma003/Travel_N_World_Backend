@@ -1,8 +1,10 @@
 import jwt from "jsonwebtoken";
 import { ROLES } from "../utils/constant.js";
+import Agent from "../models/agent.js";
+import AdminLoginCredential from "../models/adminLoginCredential.js";
 
 // Authenticate and attach user to req
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") 
     ? authHeader.slice(7) 
@@ -16,11 +18,27 @@ export function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    
+    // Check if user exists and is active in the correct collection based on role
+    let user;
+    if (payload.role === ROLES.SUPERADMIN || payload.role === ROLES.ADMIN) {
+      user = await AdminLoginCredential.findById(payload.id);
+    } else {
+      user = await Agent.findById(payload.id);
+    }
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized: User not found" });
+    }
+    
+    if (user.isActive === false) {
+      return res.status(403).json({ message: "Your account is deactivated. Please contact the administrator." });
+    }
  
     req.user = {
-      id: payload.id,
-      email: payload.email,
-      role: payload.role, 
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role, 
     };
 
     next();

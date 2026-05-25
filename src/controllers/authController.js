@@ -89,6 +89,10 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid details entered" });
     }
 
+    if (admin.isActive === false) {
+      return res.status(403).json({ message: "Your account is deactivated. Please contact the administrator." });
+    }
+
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid details entered" });
@@ -147,6 +151,10 @@ export const verifyOTP = async (req, res) => {
     const admin = await Agent.findOne({ email: normalizedEmail });
 
     if (!admin) return res.status(404).json({ message: "User no longer exists" });
+
+    if (admin.isActive === false) {
+      return res.status(403).json({ message: "Your account is deactivated. Please contact the administrator." });
+    }
     
     // 3. Generate the actual Access Token
     const accessToken = generateAccessToken(
@@ -238,6 +246,10 @@ export const googleLogin = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
 
     let agent = await Agent.findOne({ email: normalizedEmail });
+
+    if (agent && agent.isActive === false) {
+      return res.status(403).json({ message: "Your account is deactivated. Please contact the administrator." });
+    }
 
     if (!agent) {
       // Create new agent if not found

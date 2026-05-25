@@ -180,6 +180,10 @@ export const createAgent = async (data, loggedInUser) => {
   if (loggedInUser && (loggedInUser.role || "").toUpperCase() === ROLES.RM) {
     data.relationshipManagerId = loggedInUser.id || loggedInUser._id;
   }
+
+  if(loggedInUser && (loggedInUser.role || "").toUpperCase() === ROLES.RM){
+    data.relationshipManagerId = loggedInUser.id || loggedInUser._id
+  }
   
   // Check if email already exists
   const existingByEmail = await Agent.findOne({ email: normalizedEmail });
@@ -238,6 +242,12 @@ export const updateAgent = async (id, updateData, loggedInUser) => {
   
   // Authorization check: Superadmin can edit anyone; others can only edit themselves or lower-rank agents
   const isSelf = agent._id.toString() === loggedInUser.id;
+  const isOwnerRM = agent.relationshipManagerId?.toString() === loggedInUser.id;
+
+  if (loggedInUser.role === ROLES.RM && !isSelf && !isOwnerRM) {
+    throw new AppError("Unauthorized: You can only modify your own profile or your agents' profiles", 403);
+  }
+
   if (agent.role === ROLES.ADMIN && loggedInUser.role !== ROLES.SUPERADMIN && !isSelf) {
     throw new AppError("Unauthorized: You cannot modify another ADMIN's profile", 403);
   }
@@ -255,10 +265,14 @@ export const updateAgent = async (id, updateData, loggedInUser) => {
   // Restrict sensitive fields for non-SuperAdmins
   if (loggedInUser.role !== ROLES.SUPERADMIN) {
     delete updateData.role;
-    delete updateData.isVerified;
-    delete updateData.isActive;
-    delete updateData.verificationStartDate;
-    delete updateData.verificationEndDate;
+    
+    // Agar RM hai aur wo Owner hai, tab in fields ko delete MAT karo (matlab wo inko edit/verify kar sakta hai)
+    if (!(loggedInUser.role === ROLES.RM && isOwnerRM)) {
+      delete updateData.isVerified;
+      delete updateData.isActive;
+      delete updateData.verificationStartDate;
+      delete updateData.verificationEndDate;
+    }
   }
 
   // Dynamically map frontend keys to match Database schema
@@ -322,6 +336,13 @@ export const deleteAgent = async (id, loggedInUser) => {
   
   if (agent.role === ROLES.ADMIN && loggedInUser.role !== ROLES.SUPERADMIN) {
     throw new AppError("Unauthorized: You cannot delete an ADMIN account", 403);
+  }
+
+  if (loggedInUser.role === ROLES.RM) {
+    const isOwnerRM = agent.relationshipManagerId?.toString() === loggedInUser.id;
+    if (!isOwnerRM) {
+      throw new AppError("Unauthorized: You can only delete your own agents", 403);
+    }
   }
 
   await User.deleteOne({ email: agent.email });
@@ -389,6 +410,13 @@ export const toggleAgentStatus = async (id, isActive, loggedInUser) => {
   
   if (agent.role === ROLES.ADMIN && loggedInUser.role !== ROLES.SUPERADMIN) {
     throw new AppError("Unauthorized", 403);
+  }
+  
+  if (loggedInUser.role === ROLES.RM) {
+    const isOwnerRM = agent.relationshipManagerId?.toString() === loggedInUser.id;
+    if (!isOwnerRM) {
+      throw new AppError("Unauthorized: You can only toggle status of your own agents", 403);
+    }
   }
   
   agent.isActive = isActive;
