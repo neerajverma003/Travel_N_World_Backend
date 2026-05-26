@@ -64,10 +64,12 @@ export const getDashboardStats = async (req, res) => {
       // Stats for Agent
       const [
         totalItineraries,
+        totalTransportRoutes,
         totalEnquiries,
         latestEnquiries
       ] = await Promise.all([
         import("../models/AgentItinerary.js").then(m => m.AgentItinerary.countDocuments({ agentId: userId })),
+        import("../models/TransportRoute.js").then(m => m.TransportRoute.countDocuments({ agentId: userId })),
         Enquiry.countDocuments({ agentId: userId }),
         Enquiry.find({ agentId: userId }).sort({ createdAt: -1 }).limit(20)
       ]);
@@ -84,7 +86,7 @@ export const getDashboardStats = async (req, res) => {
         data: {
           totalAgents: 0,
           totalAdmins: 0,
-          totalItineraries,
+          totalItineraries: totalItineraries + totalTransportRoutes,
           totalEnquiries,
           activities,
           successRate: "99%"

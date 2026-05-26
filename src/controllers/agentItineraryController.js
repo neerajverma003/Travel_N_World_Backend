@@ -145,7 +145,18 @@ export async function createAgentItinerary(req, res) {
     }
 
     const isAdmin = req.user?.role === ROLES.ADMIN || req.user?.role === ROLES.SUPERADMIN;
-    if (!effectiveAgentId && !isAdmin) return res.status(400).json({ message: "Agent assignment is required." });
+    const isRM = req.user?.role === ROLES.RM;
+
+    if (isRM) {
+      if (!effectiveAgentId) return res.status(400).json({ message: "Agent assignment is required." });
+      const agentObj = await Agent.findById(effectiveAgentId);
+      if (!agentObj || agentObj.relationshipManagerId?.toString() !== req.user.id) {
+        return res.status(403).json({ message: "You can only create itineraries for your assigned agents." });
+      }
+    } else if (!effectiveAgentId && !isAdmin) {
+      return res.status(400).json({ message: "Agent assignment is required." });
+    }
+
     if (!title?.trim()) return res.status(400).json({ message: "Title is required." });
     if (!travelType) return res.status(400).json({ message: "Travel type is required." });
     if (!destination?.trim()) return res.status(400).json({ message: "Destination is required." });
@@ -158,7 +169,7 @@ export async function createAgentItinerary(req, res) {
       ...data,
       slug,
       createdBy: req.user?.id,
-      creatorModel: req.user?.role === ROLES.AGENT ? "Agent" : "AdminLoginCredential",
+      creatorModel: (req.user?.role === ROLES.AGENT || req.user?.role === ROLES.RM) ? "Agent" : "AdminLoginCredential",
     });
 
     await itinerary.save();
@@ -178,15 +189,42 @@ export async function listAgentItineraries(req, res) {
     
     const isAdmin = req.user?.role === ROLES.ADMIN || req.user?.role === ROLES.SUPERADMIN;
     const isAgent = req.user?.role === ROLES.AGENT;
+    const isRM = req.user?.role === ROLES.RM;
 
-
-
-    // Default to published only for everyone except admins
-    if (!isAdmin) {
+    // Default to published only for everyone except admins and RMs
+    // console.log("DEBUG listAgentItineraries:", { user: req.user, isAdmin, isAgent, isRM });
+    if (!isAdmin && !isRM) {
       filter.isPublished = true;
     }
 
-    if (isAgent) {
+    if (isRM) {
+      // RM Panel View: Show only itineraries of agents assigned to this RM
+      const managedAgents = await Agent.find({ relationshipManagerId: req.user.id }).select("_id");
+      const agentIds = managedAgents.map(a => a._id);
+
+      delete filter.isPublished; // Show drafts of their assigned agents
+
+      if (agentId === "agents_only" || !agentId || agentId === "all") {
+        filter.agentId = { $in: agentIds };
+      } else {
+        let targetId = agentId;
+        if (!mongoose.Types.ObjectId.isValid(agentId)) {
+          const companyName = agentId.replace(/-/g, " ");
+          const agent = await Agent.findOne({ company: { $regex: new RegExp(`^${companyName}$`, "i") } });
+          targetId = agent ? agent._id : null;
+        }
+
+        if (targetId && agentIds.some(id => id.toString() === targetId.toString())) {
+          filter.agentId = targetId;
+        } else {
+          return res.status(200).json({
+            message: "Agent itineraries retrieved successfully.",
+            data: [],
+            pagination: { total: 0, limit: parseInt(limit, 10), skip: parseInt(skip, 10) },
+          });
+        }
+      }
+    } else if (isAgent) {
       // Agent Panel View: If no specific agentId is passed, or if it's their own ID
       // We show everything they own (assigned by admin OR created by them)
       if (!agentId || agentId === req.user.id || agentId === "all") {
@@ -199,8 +237,6 @@ export async function listAgentItineraries(req, res) {
         // Agent viewing a specific profile (could be their own public profile or another's)
         if (mongoose.Types.ObjectId.isValid(agentId)) {
           filter.agentId = agentId;
-          // If viewing their own public profile, we keep isPublished: true by default
-          // but if they want to see everything they can pass a flag.
         } else {
           const companyName = agentId.replace(/-/g, " ");
           const agent = await Agent.findOne({ company: { $regex: new RegExp(`^${companyName}$`, "i") } });
@@ -226,7 +262,6 @@ export async function listAgentItineraries(req, res) {
     } else {
       // Public / Unauthenticated
       filter.isPublished = true;
-      // filter.agentId = { $ne: null }; // REMOVED: Allow Admin's itineraries to be visible if published
 
       if (agentId && agentId !== "all" && agentId !== "agents_only") {
         if (mongoose.Types.ObjectId.isValid(agentId)) {
@@ -315,9 +350,19 @@ export async function updateAgentItinerary(req, res) {
     
     if (!existing) return res.status(404).json({ message: "Itinerary not found." });
 
-    // Authorization check: Only assigned agent or admin can update
+    // Authorization check: Only assigned agent, owning RM, or admin can update
     if (req.user.role === ROLES.AGENT && existing.agentId.toString() !== req.user.id) {
       return res.status(403).json({ message: "Unauthorized to update this itinerary." });
+    }
+
+    if (req.user.role === ROLES.RM) {
+      if (!existing.agentId) {
+        return res.status(403).json({ message: "Unauthorized to update this itinerary." });
+      }
+      const agentObj = await Agent.findById(existing.agentId);
+      if (!agentObj || agentObj.relationshipManagerId?.toString() !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized to update this itinerary." });
+      }
     }
 
     if (req.body.title || req.body.destination) {
@@ -355,6 +400,16 @@ export async function deleteAgentItinerary(req, res) {
     // Authorization check
     if (req.user.role === ROLES.AGENT && existing.agentId.toString() !== req.user.id) {
       return res.status(403).json({ message: "Unauthorized to delete this itinerary." });
+    }
+
+    if (req.user.role === ROLES.RM) {
+      if (!existing.agentId) {
+        return res.status(403).json({ message: "Unauthorized to delete this itinerary." });
+      }
+      const agentObj = await Agent.findById(existing.agentId);
+      if (!agentObj || agentObj.relationshipManagerId?.toString() !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized to delete this itinerary." });
+      }
     }
 
     if (mongoose.Types.ObjectId.isValid(slug)) {

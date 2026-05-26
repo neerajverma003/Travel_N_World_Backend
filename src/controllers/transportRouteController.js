@@ -59,6 +59,23 @@ export const adminListTransportRoutes = async (req, res, next) => {
     const { agentId, type, search, page = 1, limit = 50 } = req.query;
     const query = {};
     if (agentId) query.agentId = agentId;
+    if (req.user.role === "AGENT") query.agentId = req.user._id || req.user.id;
+
+    if (req.user.role === "RM") {
+      const managedAgents = await Agent.find({ relationshipManagerId: req.user.id, agentCategory: "Transport" }).select("_id");
+      const agentIds = managedAgents.map((a) => a._id);
+
+      if (agentId) {
+        if (agentIds.some((id) => id.toString() === agentId.toString())) {
+          query.agentId = agentId;
+        } else {
+          return res.json({ success: true, data: [], total: 0 });
+        }
+      } else {
+        query.agentId = { $in: agentIds };
+      }
+    }
+
     if (type) query.type = type.toLowerCase();
     if (search) {
       query.$or = [
@@ -97,6 +114,14 @@ export const createTransportRoute = async (req, res, next) => {
     if (!title) throw new AppError("Title is required", 400);
     if (!destination) throw new AppError("Destination is required", 400);
 
+    if (req.user.role === "RM") {
+      if (!agentId) throw new AppError("Agent assignment is required", 400);
+      const agentObj = await Agent.findById(agentId);
+      if (!agentObj || agentObj.relationshipManagerId?.toString() !== req.user.id || agentObj.agentCategory !== "Transport") {
+        throw new AppError("You can only create routes for your assigned transport agents", 403);
+      }
+    }
+
     const route = new TransportRoute({
       title, destination,
       type: type || "domestic",
@@ -112,7 +137,7 @@ export const createTransportRoute = async (req, res, next) => {
       classification: Array.isArray(classification) ? classification : [],
       visibility: visibility || "Public",
       termsConditions, paymentMode, cancellationPolicy,
-      agentId: agentId || undefined,
+      agentId: req.user.role === "AGENT" ? (req.user._id || req.user.id) : (agentId || undefined),
       isPublished: isPublished !== false,
       createdBy, creatorModel,
     });
@@ -129,6 +154,18 @@ export const updateTransportRoute = async (req, res, next) => {
   try {
     const route = await TransportRoute.findOne({ slug: req.params.slug });
     if (!route) throw new AppError("Transport route not found", 404);
+
+    if (req.user.role === "AGENT" && route.agentId?.toString() !== (req.user._id || req.user.id)?.toString()) {
+      throw new AppError("You are not authorized to update this route", 403);
+    }
+
+    if (req.user.role === "RM") {
+      if (!route.agentId) throw new AppError("You are not authorized to update this route", 403);
+      const agentObj = await Agent.findById(route.agentId);
+      if (!agentObj || agentObj.relationshipManagerId?.toString() !== req.user.id) {
+        throw new AppError("You are not authorized to update this route", 403);
+      }
+    }
 
     const forbidden = ["_id", "id", "__v", "createdBy", "creatorModel", "createdAt", "updatedAt"];
     forbidden.forEach((f) => delete req.body[f]);
@@ -149,8 +186,22 @@ export const updateTransportRoute = async (req, res, next) => {
 /* ── ADMIN: delete ─────────────────────────────────────────── */
 export const deleteTransportRoute = async (req, res, next) => {
   try {
-    const route = await TransportRoute.findOneAndDelete({ slug: req.params.slug });
+    const route = await TransportRoute.findOne({ slug: req.params.slug });
     if (!route) throw new AppError("Transport route not found", 404);
+
+    if (req.user.role === "AGENT" && route.agentId?.toString() !== (req.user._id || req.user.id)?.toString()) {
+      throw new AppError("You are not authorized to delete this route", 403);
+    }
+
+    if (req.user.role === "RM") {
+      if (!route.agentId) throw new AppError("You are not authorized to delete this route", 403);
+      const agentObj = await Agent.findById(route.agentId);
+      if (!agentObj || agentObj.relationshipManagerId?.toString() !== req.user.id) {
+        throw new AppError("You are not authorized to delete this route", 403);
+      }
+    }
+
+    await TransportRoute.findByIdAndDelete(route._id);
     res.json({ success: true, message: "Transport route deleted" });
   } catch (err) {
     next(err);

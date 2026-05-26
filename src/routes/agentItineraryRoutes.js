@@ -34,25 +34,25 @@ const router = Router();
 router.get("/", tryAuth, listAgentItineraries); // Can filter by ?agentId=...
 router.get("/:slug", getAgentItineraryBySlug);
 
-/* ── Protected (Admin, Superadmin, Agent) ── */
+/* ── Protected (Admin, Superadmin, Agent, RM) ── */
 router.post(
   "/",
   requireAuth,
-  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT),
+  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT, ROLES.RM),
   createAgentItinerary
 );
 
 router.put(
   "/:slug",
   requireAuth,
-  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT),
+  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT, ROLES.RM),
   updateAgentItinerary
 );
 
 router.delete(
   "/:slug",
   requireAuth,
-  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT),
+  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT, ROLES.RM),
   deleteAgentItinerary
 );
 

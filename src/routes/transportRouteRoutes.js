@@ -21,32 +21,32 @@ const router = Router();
 router.get("/",       listTransportRoutes);
 router.get("/:slug",  getTransportRouteBySlug);
 
-/* ── Admin / SuperAdmin ─────────────────────────────────── */
+/* ── Admin / SuperAdmin / RM ── */
 router.get(
   "/admin/all",
   requireAuth,
-  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN),
+  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT, ROLES.RM),
   adminListTransportRoutes
 );
 
 router.post(
   "/",
   requireAuth,
-  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN),
+  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT, ROLES.RM),
   createTransportRoute
 );
 
 router.put(
   "/:slug",
   requireAuth,
-  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN),
+  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT, ROLES.RM),
   updateTransportRoute
 );
 
 router.delete(
   "/:slug",
   requireAuth,
-  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN),
+  requireRoles(ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.AGENT, ROLES.RM),
   deleteTransportRoute
 );
 

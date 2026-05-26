@@ -229,16 +229,22 @@ export const getBuyableLeads = async (req, res, next) => {
   try {
     const { default: Agent } = await import("../models/agent.js");
 
-    //1 for pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 100;
     const skip = (page-1)*limit;
-
+    const { source, notSource } = req.query;
 
     // 3 Define query: Show all enquiries that are not 'Booked'
     const marketplaceQuery = {
       status: { $ne: "Booked" }
     };
+    
+    if (source) {
+      marketplaceQuery.source = source;
+    }
+    if (notSource) {
+      marketplaceQuery.source = { $ne: notSource };
+    }
 
     // 4 get total count for pagination metadata
     const total = await Enquiry.countDocuments(marketplaceQuery);
