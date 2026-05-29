@@ -39,7 +39,7 @@ const agentSchema = new Schema(
 
     // Auth & Status
     role: { type: String, enum: Object.values(ROLES), default: ROLES.AGENT },
-    agentCategory: { type: String, enum: ["Travel", "Transport"], default: "Travel" },
+    agentCategory: { type: String, enum: ["Travel", "Transport", "Hotel"], default: "Travel" },
     isActive: { type: Boolean, default: true },
     isVerified: { type: Boolean, default: false },
 

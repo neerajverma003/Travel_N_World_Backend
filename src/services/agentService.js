@@ -25,9 +25,11 @@ export const getAllAgents = async (page = 1, limit = 10, role, search = "", curr
   const normalizedRole = (role || "").toUpperCase();
   if (normalizedRole === ROLES.AGENT || !role) {
     if (!agentCategory || agentCategory === "Travel") {
-      query.agentCategory = { $ne: "Transport" }; // matches "Travel" and documents without agentCategory
+      query.agentCategory = { $nin: ["Transport", "Hotel"] }; // matches "Travel" and documents without agentCategory
     } else if (agentCategory === "Transport") {
       query.agentCategory = "Transport";
+    } else if (agentCategory === "Hotel") {
+      query.agentCategory = "Hotel";
     }
     // If agentCategory is "All", we do not apply agentCategory query filter.
   } else if (agentCategory && agentCategory !== "All") {
@@ -77,9 +79,11 @@ export const getVerifiedAgents = async (category = "Travel") => {
   };
 
   if (category === "Travel") {
-    query.agentCategory = { $ne: "Transport" };
+    query.agentCategory = { $nin: ["Transport", "Hotel"] };
   } else if (category === "Transport") {
     query.agentCategory = "Transport";
+  } else if (category === "Hotel") {
+    query.agentCategory = "Hotel";
   }
 
   return await Agent.find(query)
@@ -93,9 +97,11 @@ export const getPublicAgents = async (category = "Travel") => {
   const query = { isActive: true, isVerified: false };
 
   if (category === "Travel") {
-    query.agentCategory = { $ne: "Transport" };
+    query.agentCategory = { $nin: ["Transport", "Hotel"] };
   } else if (category === "Transport") {
     query.agentCategory = "Transport";
+  } else if (category === "Hotel") {
+    query.agentCategory = "Hotel";
   }
   // "All" — no agentCategory filter
 
