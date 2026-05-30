@@ -30,7 +30,7 @@ export const createEnquiry = async (req, res, next) => {
       // 1. Fetch Superadmins from adminslogincredentials collection
       const { default: AdminLoginCredential } = await import("../models/adminLoginCredential.js");
       const superadmins = await AdminLoginCredential.find({ role: "SUPERADMIN", notificationsEnabled: { $ne: false } });
-      console.log("📢 Found superadmins for notification:", superadmins.length);
+      console.log(" Found superadmins for notification:", superadmins.length);
       superadmins.forEach((admin) => {
         notificationsToCreate.push({
           recipient: admin._id,
@@ -71,7 +71,7 @@ export const createEnquiry = async (req, res, next) => {
       }
 
       // Bulk save to Database
-      console.log("📢 Total notifications to create:", notificationsToCreate.length);
+      console.log(" Total notifications to create:", notificationsToCreate.length);
       if (notificationsToCreate.length > 0) {
         const saved = await Notification.insertMany(notificationsToCreate);
         // Emit real-time notification event to all connected clients
@@ -79,12 +79,12 @@ export const createEnquiry = async (req, res, next) => {
         if (io) {
           io.emit('new-notification', { notifications: notificationsToCreate });
         }
-        console.log("✅ Notifications saved:", saved.length);
+        console.log(" Notifications saved:", saved.length);
       } else {
-        console.log("⚠️ No notifications to create - superadmins array was empty");
+        console.log(" No notifications to create - superadmins array was empty");
       }
     } catch (notifErr) {
-      console.error("❌ Failed to generate DB notifications:", notifErr);
+      console.error(" Failed to generate DB notifications:", notifErr);
     }
 
     io.emit('new-enquiry',enquiry);
