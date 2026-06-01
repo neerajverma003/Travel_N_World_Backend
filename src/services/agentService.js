@@ -249,8 +249,9 @@ export const updateAgent = async (id, updateData, loggedInUser) => {
   // Authorization check: Superadmin can edit anyone; others can only edit themselves or lower-rank agents
   const isSelf = agent._id.toString() === loggedInUser.id;
   const isOwnerRM = agent.relationshipManagerId?.toString() === loggedInUser.id;
+  const isParentRM = agent.parentId?.toString() === loggedInUser.id;
 
-  if (loggedInUser.role === ROLES.RM && !isSelf && !isOwnerRM) {
+  if (loggedInUser.role === ROLES.RM && !isSelf && !isOwnerRM && !isParentRM) {
     throw new AppError("Unauthorized: You can only modify your own profile or your agents' profiles", 403);
   }
 
@@ -272,8 +273,11 @@ export const updateAgent = async (id, updateData, loggedInUser) => {
   if (loggedInUser.role !== ROLES.SUPERADMIN) {
     delete updateData.role;
     
-    // Agar RM hai aur wo Owner hai, tab in fields ko delete MAT karo (matlab wo inko edit/verify kar sakta hai)
-    if (!(loggedInUser.role === ROLES.RM && isOwnerRM)) {
+    // Admins can verify anyone. RMs can verify their assigned or created agents.
+    const isOwnerOrCreator = isOwnerRM || isParentRM;
+    const canVerify = loggedInUser.role === ROLES.ADMIN || (loggedInUser.role === ROLES.RM && isOwnerOrCreator);
+    
+    if (!canVerify) {
       delete updateData.isVerified;
       delete updateData.isActive;
       delete updateData.verificationStartDate;
@@ -346,7 +350,8 @@ export const deleteAgent = async (id, loggedInUser) => {
 
   if (loggedInUser.role === ROLES.RM) {
     const isOwnerRM = agent.relationshipManagerId?.toString() === loggedInUser.id;
-    if (!isOwnerRM) {
+    const isParentRM = agent.parentId?.toString() === loggedInUser.id;
+    if (!isOwnerRM && !isParentRM) {
       throw new AppError("Unauthorized: You can only delete your own agents", 403);
     }
   }
@@ -420,7 +425,8 @@ export const toggleAgentStatus = async (id, isActive, loggedInUser) => {
   
   if (loggedInUser.role === ROLES.RM) {
     const isOwnerRM = agent.relationshipManagerId?.toString() === loggedInUser.id;
-    if (!isOwnerRM) {
+    const isParentRM = agent.parentId?.toString() === loggedInUser.id;
+    if (!isOwnerRM && !isParentRM) {
       throw new AppError("Unauthorized: You can only toggle status of your own agents", 403);
     }
   }
