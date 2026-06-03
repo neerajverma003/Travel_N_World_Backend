@@ -17,7 +17,7 @@ const dayPlanSchema = new mongoose.Schema(
   },
   { _id: false }
 );
-
+  
 const agentItinerarySchema = new mongoose.Schema(
   {
     /* ── Identity & Assignment ────────────────────────────────────────── */

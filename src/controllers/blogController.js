@@ -9,6 +9,7 @@ const signBlog = async (blog) => {
   if (obj.coverImage) {
     obj.coverImage = await getPresignedViewUrl(obj.coverImage);
   }
+  
   return obj;
 };
 

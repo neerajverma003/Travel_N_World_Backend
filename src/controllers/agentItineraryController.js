@@ -201,7 +201,8 @@ export async function listAgentItineraries(req, res) {
       // RM Panel View: Show only itineraries of agents assigned to this RM
       const managedAgents = await Agent.find({ relationshipManagerId: req.user.id }).select("_id");
       const agentIds = managedAgents.map(a => a._id);
-
+ 
+      
       delete filter.isPublished; // Show drafts of their assigned agents
 
       if (agentId === "agents_only" || !agentId || agentId === "all") {

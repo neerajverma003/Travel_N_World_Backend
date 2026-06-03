@@ -8,7 +8,7 @@ const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS || "10", 10);
 
 const addressSchema = new Schema(
   {
-    houseNo: String,
+    houseNo: String ,
     street: String,
     area: String,
     city: String,

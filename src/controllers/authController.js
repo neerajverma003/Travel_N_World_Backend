@@ -75,7 +75,6 @@ export const register = async (req, res) => {
  * ======================
  */
 export const login = async (req, res) => {
-  console.log("Response sent to frontend")
   try {
     const { email, password, rememberMe, loginMode } = req.body;
     const normalizedEmail = email?.toLowerCase().trim();

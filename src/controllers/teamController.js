@@ -40,7 +40,7 @@ export const addTeamMember = async (req, res, next) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if email already exists in Agent or User model
+    //   Check if email already exists in Agent or User model
     const [existingAgent, existingUser] = await Promise.all([
       Agent.findOne({ email: normalizedEmail }),
       User.findOne({ email: normalizedEmail })

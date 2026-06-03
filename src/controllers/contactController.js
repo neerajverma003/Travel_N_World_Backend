@@ -12,6 +12,7 @@ export const createContactInquiry = async (req, res) => {
       phone,
       email,
       description
+      
     });
 
     // 🔔 Notify all Superadmins about new Contact Us submission

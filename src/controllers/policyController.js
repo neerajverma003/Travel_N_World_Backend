@@ -14,7 +14,7 @@ export const getPolicy = async (req, res) => {
     
     res.status(200).json({ 
       success: true, 
-      data: policy || { content: "" } // Agar nahi mila to khali content bhejenge
+      data: policy || { content: "" }   // Agar nahi mila to khali content bhejenge
     });
   } catch (error) {
     next(new AppError("Failed to fetch policy", 500));

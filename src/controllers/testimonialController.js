@@ -1,7 +1,7 @@
 import { Testimonial } from "../models/Testimonial.js";
 import { getPresignedViewUrl } from "../services/s3Service.js";
 
-// Get all testimonials
+// Get all  testimonials
 export const getTestimonials = async (req, res) => {
   try {
     const testimonials = await Testimonial.find().sort({ createdAt: -1 });

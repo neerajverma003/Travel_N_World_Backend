@@ -405,6 +405,7 @@ export async function getDestinationsByType(req, res) {
       .sort({ createdAt: -1 });
 
     const signedDestinations = await Promise.all(
+      
       destinations.map((dest) => signDestination(dest))
     );
 

@@ -291,6 +291,7 @@ export async function listItineraries(req, res) {
     }
 
     if (destination) {
+      
       // Accept URL-slug style ("goa-beaches") or plain name ("Goa Beaches")
       const destName = destination.replace(/-/g, " ");
       filter.destination = new RegExp(`^${destName}$`, "i");

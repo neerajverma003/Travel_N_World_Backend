@@ -4,7 +4,7 @@
  * Public: list & get by slug
  */
 
-import { TransportRoute } from "../models/TransportRoute.js";
+import { TransportRoute  } from "../models/TransportRoute.js";
 import { AppError } from "../utils/errorHandler.js";
 import Agent from "../models/agent.js";
 
