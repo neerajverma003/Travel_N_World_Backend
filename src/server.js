@@ -23,6 +23,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import transportRouteRoutes from './routes/transportRouteRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/transport-routes', transportRouteRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Global error handler
 app.use(errorHandler);

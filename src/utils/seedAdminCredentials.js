@@ -20,7 +20,7 @@ export const seedAdminCredentials = async () => {
         password: adminPassword,
         role: ROLES.SUPERADMIN
       });
-      console.log(`✅ Initial Super Admin created: ${adminEmail}`);
+      console.log(` Initial Super Admin created: ${adminEmail}`);
     }
 
     // 2. Check/Create Developer Admin
@@ -31,7 +31,7 @@ export const seedAdminCredentials = async () => {
         password: developerPassword,
         role: ROLES.SUPERADMIN
       });
-      console.log(`✅ Initial Developer Admin created: ${developerEmail}`);
+      console.log(` Initial Developer Admin created: ${developerEmail}`);
     }
 
     // 3. (Removed) Automatic deletion of other accounts to allow manual management
