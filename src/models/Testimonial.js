@@ -38,6 +38,11 @@ const testimonialSchema = new mongoose.Schema(
       type: String, // For Video Testimonials
       trim: true
     },
+    customerId:{
+     type:mongoose.Schema.Types.ObjectId,
+     ref:"Customer",
+     required:true
+    },
     visibility: {
       type: String,
       enum: ['Public', 'Private'],
