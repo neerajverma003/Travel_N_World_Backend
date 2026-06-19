@@ -39,6 +39,7 @@ export async function requireAuth(req, res, next) {
       id: user._id.toString(),
       email: user.email,
       role: user.role, 
+      parentId: user.parentId ? user.parentId.toString() : null,
     };
 
     next();

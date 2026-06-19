@@ -166,7 +166,7 @@ export const getAllEnquiries = async (req, res, next) => {
  */
 export const getAgentEnquiries = async (req, res, next) => {
   try {
-    const agentId = req.user.id; // From auth middleware
+    const agentId = req.user.parentId || req.user.id; // Support Sub Agents
     const agent = await (await import("../models/agent.js")).default.findById(agentId);
     const enquiries = await Enquiry.find({ agentId }).sort({ createdAt: -1 });
 
@@ -294,7 +294,8 @@ export const updateEnquiryStatus = async (req, res, next) => {
 
     // Security: Only the assigned agent or an admin can update
     // (Assuming req.user exists from auth middleware)
-    if (req.user.role !== 'admin' && enquiry.agentId?.toString() !== req.user.id) {
+    const targetAgentId = req.user.parentId || req.user.id;
+    if (req.user.role !== 'admin' && req.user.role !== 'SUPERADMIN' && req.user.role !== 'RM' && enquiry.agentId?.toString() !== targetAgentId.toString()) {
       return next(new AppError("Not authorized to update this lead", 403));
     }
 

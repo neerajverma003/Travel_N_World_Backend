@@ -32,7 +32,7 @@ export const getTeamMembers = async (req, res, next) => {
 export const addTeamMember = async (req, res, next) => {
   try {
     const parentAgentId = req.user.id;
-    const { firstName, lastName, email, phone, password, role } = req.body;
+    const { firstName, lastName, email, phone, password, role, permissions } = req.body;
 
     if (!email || !password || !firstName) {
       return next(new AppError("Please provide firstName, email and password", 400));
@@ -72,6 +72,7 @@ export const addTeamMember = async (req, res, next) => {
       company: req.user.company, // Inherit company name
       isActive: true,
       isVerified: true, // Team members created by verified agents can be auto-verified or handled by admin
+      permissions: permissions || {},
     });
 
     await newMember.save();
@@ -88,6 +89,50 @@ export const addTeamMember = async (req, res, next) => {
 };
 
 /**
+ * @desc Update a team member
+ * @route PUT /api/team/:id
+ * @access Private (Agent)
+ */
+export const updateTeamMember = async (req, res, next) => {
+  try {
+    const parentAgentId = req.user.id;
+    const { id } = req.params;
+    const { firstName, lastName, phone, isActive, permissions } = req.body;
+
+    const member = await Agent.findOne({ _id: id, parentId: parentAgentId });
+
+    if (!member) {
+      return next(new AppError("Team member not found or unauthorized", 404));
+    }
+
+    if (firstName !== undefined) member.firstName = firstName;
+    if (lastName !== undefined) member.lastName = lastName;
+    if (phone !== undefined) member.phone = phone;
+    if (isActive !== undefined) member.isActive = isActive;
+    if (permissions !== undefined) member.permissions = permissions;
+
+    await member.save();
+
+    // Also update User if name changed
+    if (firstName !== undefined || lastName !== undefined) {
+      await User.findOneAndUpdate(
+        { email: member.email },
+        { firstName: member.firstName, lastName: member.lastName }
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Team member updated successfully",
+      data: member,
+    });
+  } catch (error) {
+    console.error("Error updating team member:", error);
+    next(new AppError("Failed to update team member", 500));
+  }
+};
+
+/**
  * @desc Remove a team member
  * @route DELETE /api/team/:id
  * @access Private (Agent)
@@ -98,12 +143,16 @@ export const removeTeamMember = async (req, res, next) => {
     const { id } = req.params;
 
     const member = await Agent.findOne({ _id: id, parentId: parentAgentId });
+
     if (!member) {
       return next(new AppError("Team member not found or unauthorized", 404));
     }
 
-    await User.deleteOne({ email: member.email });
-    await Agent.deleteOne({ _id: id });
+    // Optional: Delete the Auth User as well
+    await User.findOneAndDelete({ email: member.email });
+
+    // Delete the Agent Profile
+    await Agent.findByIdAndDelete(id);
 
     return res.status(200).json({
       success: true,

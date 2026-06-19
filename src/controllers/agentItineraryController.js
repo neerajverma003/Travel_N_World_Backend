@@ -141,7 +141,7 @@ export async function createAgentItinerary(req, res) {
     const { title, travelType, destination, agentId } = req.body;
     let effectiveAgentId = agentId;
     if (!effectiveAgentId && req.user?.role === ROLES.AGENT) {
-      effectiveAgentId = req.user.id;
+      effectiveAgentId = req.user.parentId || req.user.id;
     }
 
     const isAdmin = req.user?.role === ROLES.ADMIN || req.user?.role === ROLES.SUPERADMIN;
@@ -228,11 +228,13 @@ export async function listAgentItineraries(req, res) {
     } else if (isAgent) {
       // Agent Panel View: If no specific agentId is passed, or if it's their own ID
       // We show everything they own (assigned by admin OR created by them)
-      if (!agentId || agentId === req.user.id || agentId === "all") {
+      const targetAgentId = req.user.parentId || req.user.id;
+      if (!agentId || agentId === targetAgentId || agentId === req.user.id || agentId === "all") {
         delete filter.isPublished; // Show drafts in dashboard
         filter.$or = [
-          { agentId: req.user.id },
-          { createdBy: req.user.id }
+          { agentId: targetAgentId },
+          { createdBy: req.user.id },
+          { createdBy: targetAgentId }
         ];
       } else {
         // Agent viewing a specific profile (could be their own public profile or another's)
@@ -352,7 +354,8 @@ export async function updateAgentItinerary(req, res) {
     if (!existing) return res.status(404).json({ message: "Itinerary not found." });
 
     // Authorization check: Only assigned agent, owning RM, or admin can update
-    if (req.user.role === ROLES.AGENT && existing.agentId.toString() !== req.user.id) {
+    const targetAgentId = req.user.parentId || req.user.id;
+    if (req.user.role === ROLES.AGENT && existing.agentId?.toString() !== targetAgentId.toString()) {
       return res.status(403).json({ message: "Unauthorized to update this itinerary." });
     }
 
@@ -399,7 +402,8 @@ export async function deleteAgentItinerary(req, res) {
     if (!existing) return res.status(404).json({ message: "Itinerary not found." });
 
     // Authorization check
-    if (req.user.role === ROLES.AGENT && existing.agentId.toString() !== req.user.id) {
+    const targetAgentId = req.user.parentId || req.user.id;
+    if (req.user.role === ROLES.AGENT && existing.agentId?.toString() !== targetAgentId.toString()) {
       return res.status(403).json({ message: "Unauthorized to delete this itinerary." });
     }
 

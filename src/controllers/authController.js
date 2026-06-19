@@ -91,7 +91,16 @@ export const login = async (req, res) => {
     if (admin.isActive === false) {
       return res.status(403).json({ message: "Your account is deactivated. Please contact the administrator." });
     }
-
+   if(loginMode === "team" && !admin.parentId){
+    return res.status(400).json({
+      message:"You are main agent. please select 'Main Agent' from the dropdown" 
+    })
+   }
+   if(loginMode === "agent" && admin.parentId){
+    return res.status(400).json({
+      message:"You are a team Member. Please select 'Team Member' from the dropdown"
+    })
+   }
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid details entered" });
@@ -182,6 +191,9 @@ export const verifyOTP = async (req, res) => {
         photo: admin.photo,
         isVerified: admin.isVerified ?? false,
         isProfileComplete: admin.isProfileComplete ?? false,
+
+        parentId:admin.parentId || null,
+        permissions:admin.permissions || {}
       },
     });
 
@@ -193,12 +205,27 @@ export const verifyOTP = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const agent = await Agent.findById(req.user.id)
+    let agent = await Agent.findById(req.user.id)
       .select("-password")
       .populate("relationshipManagerId", "firstName lastName email phone photo");
     if (!agent) {
       return res.status(404).json({ message: "Profile not found" });
     }
+
+    // Agar ye Team Member hai, toh Parent ki company details isme attach kar do
+    if (agent.parentId) {
+      const parentAgent = await Agent.findById(agent.parentId);
+      if (parentAgent) {
+        agent = agent.toObject(); // Convert to plain object so we can modify
+        agent.company = parentAgent.company;
+        agent.companyAddress = parentAgent.companyAddress;
+        agent.gstin = parentAgent.gstin;
+        agent.pan = parentAgent.pan;
+        agent.logo = parentAgent.logo;
+        agent.website = parentAgent.website;
+      }
+    }
+
     const signedAgent = await signAgent(agent);
     return res.status(200).json({ user: signedAgent });
   } catch (error) {
@@ -231,7 +258,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const googleLogin = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token,loginMode } = req.body;
     if (!token) {
       return res.status(400).json({ message: "Token is required" });
     }
@@ -245,6 +272,26 @@ export const googleLogin = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
 
     let agent = await Agent.findOne({ email: normalizedEmail });
+    if(agent){
+      if(loginMode === "team" && !agent.parentId){
+        return res.status(400).json({
+         message:"You are a main agent. Please select 'Main Agent' from the dropdown"
+        })
+      }
+     if(loginMode === "agent" && agent.parentId){
+        return res.status(400).json({
+          message:"You are a team member. Please select 'Team Member' from the dropdown"
+        })
+      }
+    }
+
+    if(!agent && loginMode === "team"){
+      return res.status(400).json({
+        message:"No team member found with this google account. Please contact your administrator"
+      })
+    }
+
+  
 
     if (agent && agent.isActive === false) {
       return res.status(403).json({ message: "Your account is deactivated. Please contact the administrator." });
@@ -283,6 +330,8 @@ export const googleLogin = async (req, res) => {
         photo: agent.photo,
         isVerified: agent.isVerified ?? false,
         isProfileComplete: agent.isProfileComplete ?? false,
+        parentId: agent.parentId || null,
+        permissions: agent.permissions || {}
       },
     });
   } catch (error) {

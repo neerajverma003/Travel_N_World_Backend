@@ -62,16 +62,17 @@ export const getDashboardStats = async (req, res) => {
 
     if (userRole === ROLES.AGENT) {
       // Stats for Agent
+      const targetAgentId = req.user.parentId || userId;
       const [
         totalItineraries,
         totalTransportRoutes,
         totalEnquiries,
         latestEnquiries
       ] = await Promise.all([
-        import("../models/AgentItinerary.js").then(m => m.AgentItinerary.countDocuments({ agentId: userId })),
-        import("../models/TransportRoute.js").then(m => m.TransportRoute.countDocuments({ agentId: userId })),
-        Enquiry.countDocuments({ agentId: userId }),
-        Enquiry.find({ agentId: userId }).sort({ createdAt: -1 }).limit(20)
+        import("../models/AgentItinerary.js").then(m => m.AgentItinerary.countDocuments({ agentId: targetAgentId })),
+        import("../models/TransportRoute.js").then(m => m.TransportRoute.countDocuments({ agentId: targetAgentId })),
+        Enquiry.countDocuments({ agentId: targetAgentId }),
+        Enquiry.find({ agentId: targetAgentId }).sort({ createdAt: -1 }).limit(20)
       ]);
 
       const activities = latestEnquiries.map(e => ({
