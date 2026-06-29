@@ -16,14 +16,15 @@ const runSeed = async () => {
 
       const existing = await AdminLoginCredential.findOne({ email: email.toLowerCase() });
       if (existing) {
-        console.log(`❌ Admin with email ${email} already exists.`);
-      } else {
+        console.log(`-Admin with email ${email} already exists.`);
+      }
+       else {
         await AdminLoginCredential.create({
           email: email.toLowerCase(),
           password,
           role: ROLES.SUPERADMIN
         });
-        console.log(`✅ Admin created successfully: ${email}`);
+        console.log(`Admin created successfully: ${email}`);
       }
     } else {
       // Fallback to the utility (which uses .env)
